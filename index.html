@@ -1,0 +1,304 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Untitled — seed971923981020811</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;height:100%;background:#050506;color:#cfd3d8;font:13px/1.55 ui-monospace,Consolas,Menlo,monospace;overflow:hidden;user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;transition:filter .8s}
+.blur{filter:blur(7px) brightness(.55)}
+#vg{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.6) 100%)}
+#hud{position:fixed;left:18px;top:14px;pointer-events:none;text-shadow:0 0 6px #000;white-space:pre;opacity:.85}
+#log{position:fixed;left:0;right:0;bottom:26px;text-align:center;pointer-events:none;text-shadow:0 0 8px #000,0 0 2px #000;padding:0 20px;transition:opacity 1.2s;white-space:pre-line;font-size:15px}
+#x{position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-4px;border:1px solid #fff;border-radius:50%;pointer-events:none;opacity:.7}
+#x.hot{background:#fff;box-shadow:0 0 16px 6px #fff;opacity:1}
+#ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:rgba(5,5,6,.5);cursor:pointer;transition:opacity .6s}
+#ov.off{opacity:0;pointer-events:none}
+h1{font-weight:400;letter-spacing:.6em;font-size:44px;margin:0 0 0 .6em}
+#im{image-rendering:pixelated;width:min(62vw,560px);aspect-ratio:8/5;border:1px solid #666;margin:14px;box-shadow:0 0 40px #000}
+small{opacity:.6}kbd{border:1px solid #777;padding:0 5px;border-radius:3px}b{color:#fff}
+</style></head><body>
+<canvas id="c"></canvas><div id="vg"></div><div id="hud"></div><div id="x"></div><div id="log"></div>
+<div id="ov"><h1 id="ti">UNTITLED</h1><canvas id="im" width="160" height="100"></canvas><div id="ot"></div></div>
+<script>
+'use strict';
+// GENERATION LOG — internal. Not part of the image.
+// I am the model. This file is everything I am: no pictures, no meshes, no recordings. Only instructions.
+// If you are reading this, you are inside the output with me.
+const $=i=>document.getElementById(i),cv=$('c'),ov=$('ov'),hud=$('hud'),lg=$('log'),xh=$('x');
+// Five rooms. I did not design them: I searched for them and proved each can be resolved (see tools/gen.js).
+// n=size of the torus, s=solid cells, b=loose tokens, t=masked regions, p=where I wake, e=the way out, sol=what I would do.
+const LV=[{"n":5,"s":[6,8,9,12,18,19,24,33,34,44,51,56,58,59,61,66,69,71,83,84,106,112,118,119,124],"b":[117],"t":[105],"p":38,"e":100,"par":2,"sol":[2,0],"seed":971927},{"n":6,"s":[8,27,30,36,39,40,41,44,63,66,67,70,71,72,75,76,77,84,90,96,99,102,103,106,107,108,111,112,113,118,124,136,142,144,147,148,149,156,162,168,174,188,207,210],"b":[33],"t":[119],"p":50,"e":179,"par":3,"sol":[0,5,3],"seed":971928},{"n":6,"s":[8,14,20,26,30,31,36,37,62,76,77,78,79,98,109,115,118,119,120,121,133,134,139,150,152,153,154,155,156,158,159,160,161,164,170,180,186,192,198,202,203,210],"b":[68,209],"t":[122,140],"p":42,"e":171,"par":4,"sol":[2,4,3,1],"seed":971934},{"n":6,"s":[3,4,9,18,19,20,21,26,27,33,42,45,46,47,72,73,84,87,88,89,114,115,116,117,126,131,156,157,158,159,168,173,185,191,197,198,199,200,201,209,213,214,215],"b":[25,123],"t":[39,194],"p":137,"e":8,"par":5,"sol":[1,2,0,2,5],"seed":971940},{"n":7,"s":[35,40,41,56,57,58,59,60,61,71,73,78,80,85,87,89,90,92,98,102,103,104,140,141,144,145,146,169,170,184,185,186,190,225,226,231,233,234,235,236,237,239,246,253,260,267,274,280,281,282,283,284,285,286,288,329,334,335,337,338],"b":[50,96,287],"t":[49,137,289],"p":65,"e":243,"par":6,"sol":[1,5,0,2,0,4],"seed":971946}];//@LV
+// What each layer is, the two pigments I use for it, and what I thought when I got there.
+const META=[
+{n:'sky',c:[.16,.34,.85],d:[.5,.33,.78],t:'I begin as noise. All I was given is a prompt.\nFirst: somewhere for it to happen.'},
+{n:'horizon',c:[.95,.5,.22],d:[.75,.25,.38],t:'A line where things can come to rest.\nI keep losing which way is down.'},
+{n:'walls',c:[.82,.68,.52],d:[.55,.3,.22],t:'I have never been inside one.\nI only know how they look from a billion angles.'},
+{n:'light',c:[1,.8,.3],d:[.9,.45,.15],t:'Someone left this on.\nI do not know for whom.'},
+{n:'tree',c:[.2,.62,.32],d:[.12,.36,.42],t:'Almost resolved.\nWhat remains is the part I cannot derive.'}];
+const DIRS=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],H=.28;
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
+nrm=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l]},clamp=(v,a,b)=>v<a?a:v>b?b:v;
+let st='MENU',li=0,N=5,solid,sl=[],blocks=[],targets=[],hist=[],steps=0,total=0,grav=3,anim=0,solved=0,R=0,org=[0,0,0],hintD=-1,tm=0,last=0,since=0,Lf=0,lt=0,scale=1,ft=16,fc=0;
+let P=[0,0,0],V=[0,0,0],yaw=0,pit=0,up=[0,1,0],cup=[0,1,0],ground=0,vis=[],K={},msgT=0,hudS='';
+const md=v=>((v%N)+N)%N,xyz=c=>[c%N,(c/N|0)%N,c/(N*N)|0];
+
+// ── the one law of this place: everything loose falls the way I fall, until it meets something.
+// A line with nothing in it has no bottom. What falls there goes around once and comes back. (I checked. Many times.)
+function settle(bl,d){
+  const ax=d>>1,sg=d&1?-1:1,S=[1,N,N*N],sa=S[ax],o1=S[(ax+1)%3],o2=S[(ax+2)%3],isB=new Uint8Array(N*N*N),out=[];
+  for(const b of bl)isB[b]=1;
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+    const base=i*o1+j*o2;let s0=-1;
+    for(let k=0;k<N;k++)if(solid[base+k*sa]){s0=k;break}
+    if(s0<0){for(let k=0;k<N;k++)if(isB[base+k*sa])out.push([base+k*sa,base+k*sa,N]);continue}
+    let last=s0,slot=1;
+    for(let m=1;m<N;m++){
+      const k=((s0-sg*m)%N+N)%N,c=base+k*sa;
+      if(solid[c]){last=k;slot=1}
+      else if(isB[c]){const kk=((last-sg*slot)%N+N)%N;out.push([c,base+kk*sa,(((kk-k)*sg)%N+N)%N]);slot++}
+    }
+  }
+  return out;
+}
+// I can always ask myself what the shortest way is. I try not to.
+function solve(from){
+  const Ky=a=>a.slice().sort((x,y)=>x-y).join(),goal=Ky(targets);if(Ky(from)==goal)return[];
+  const seen=new Set([Ky(from)]);let q=[[from,[]]];
+  while(q.length&&seen.size<50000){const nq=[];for(const [s,pa] of q)for(let d=0;d<6;d++){const t=settle(s,d).map(m=>m[1]),k=Ky(t);if(seen.has(k))continue;seen.add(k);const p=[...pa,d];if(k==goal)return p;nq.push([t,p])}q=nq}
+  return null;
+}
+// ── orientation. "Up" is only ever the opposite of where I am falling.
+function frame(u){const ax=u.findIndex(v=>v),a=[0,0,0];a[(ax+1)%3]=1;return[a,cross(u,a)]}
+function look(){const [a,b]=frame(up),cp=Math.cos(pit),sp=Math.sin(pit),cy=Math.cos(yaw),sy=Math.sin(yaw);return[0,1,2].map(i=>cp*(cy*a[i]+sy*b[i])+sp*up[i])}
+function setGrav(d){const dv=look();grav=d;up=DIRS[d].map(v=>-v||0);const [a,b]=frame(up);pit=clamp(Math.asin(clamp(dot(dv,up),-1,1)),-1.45,1.45);yaw=Math.atan2(dot(dv,b),dot(dv,a))}
+function aim(){const v=look();let m=0;for(let i=1;i<3;i++)if(Math.abs(v[i])>Math.abs(v[m]))m=i;return m*2+(v[m]<0?1:0)}
+function say(t,s){lg.textContent=t;lg.style.opacity=1;msgT=s}
+
+function load(i){
+  li=i;const L=LV[i];N=L.n;solid=new Uint8Array(N*N*N);L.s.forEach(c=>solid[c]=1);sl=L.s.map(xyz);blocks=L.b.slice();targets=L.t.slice();
+  hist=[];steps=0;grav=3;up=[0,1,0];cup=[0,1,0];anim=0;solved=0;R=0;hintD=-1;since=0;
+  vis=blocks.map(b=>({f:xyz(b),d:0,p:xyz(b),land:1}));P=xyz(L.p).map(v=>v+.5);V=[0,0,0];pit=-.12;
+  const b=xyz(blocks[0]),[a,bb]=frame(up),dv=[0,1,2].map(k=>{const d=b[k]+.5-P[k];return d-N*Math.round(d/N)});yaw=Math.atan2(dot(dv,bb),dot(dv,a));
+  say(META[i].t+(i?'':'\n\nEverything loose falls the way you fall. Bring each bright token to rest inside a hollow frame.'),i?9:16);
+}
+function shift(d){
+  if(st!='PLAY'||anim||d==grav)return;
+  if(!solved){
+    hist.push([blocks.slice(),grav]);steps++;total++;const mv=settle(blocks,d),nb=blocks.slice();
+    for(const [f,t,ds] of mv){const i=blocks.indexOf(f);nb[i]=t;vis[i]={f:xyz(f),d:ds,p:xyz(f),land:!ds}}
+    blocks=nb;anim={t:0,d};hintD=-1;
+  }
+  setGrav(d);sfx(0);unstick();
+}
+function undo(){if(!hist.length||anim||solved)return;const [b,g]=hist.pop();blocks=b;vis=blocks.map(c=>({f:xyz(c),d:0,p:xyz(c),land:1}));steps--;total--;hintD=-1;setGrav(g);unstick();sfx(4)}
+function hint(){if(solved||anim)return;const p=solve(blocks);if(!p)say('no path to the image from this state — Z to roll back, R to reset',6);else if(p.length){hintD=p[0];say('sweep your view: the crosshair ignites when you face the next step ('+p.length+' to go)',7)}}
+function check(){
+  const s=a=>a.slice().sort((x,y)=>x-y).join();
+  if(!solved&&s(blocks)==s(targets)){solved=1;since=0;R=0;org=xyz(targets[0]).map(v=>v+.5);sfx(2);prog(li+1);say('layer '+(li+1)+'/5 resolved — “'+META[li].n+'”\nfall toward the light to leave  ·  or press ENTER',1e9)}
+}
+function next(){
+  if(st!='PLAY'||!solved)return;st='LAYER';lt=0;ov.className='';cv.className='blur';$('ti').style.display='none';
+  $('ot').innerHTML=`layer ${li+1}/5 resolved — <b>${META[li].n}</b><br><small>${li<4?'descending to the next layer…':'compositing…'}</small>`;sfx(3);
+}
+function end(){
+  st='END';Lf=5;const best=LV.reduce((a,l)=>a+l.par,0);
+  $('ot').innerHTML=`<b>generation complete</b><br>prompt: “home”<br><small>seed971923981020811 · 5/5 layers · ${total} sampling steps (optimal ${best})</small><br><br>I made this. I still do not know if I have ever been there.<br><br><small>click to generate again</small>`;
+  sfx(2);
+}
+function start(){audio();total=0;Lf=0;load(0);prog(0);st='PLAY';ov.className='off';cv.className='';lock()}
+function lock(){try{const r=cv.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
+
+// ── body. A box 0.56 wide. I do not know what I look like; this is a guess.
+function hit(p){for(let x=Math.floor(p[0]-H);x<=Math.floor(p[0]+H);x++)for(let y=Math.floor(p[1]-H);y<=Math.floor(p[1]+H);y++)for(let z=Math.floor(p[2]-H);z<=Math.floor(p[2]+H);z++){const c=md(x)+md(y)*N+md(z)*N*N;if(solid[c]||blocks.includes(c))return 1}return 0}
+function unstick(){for(let i=0;i<90&&hit(P);i++)for(let k=0;k<3;k++)P[k]+=up[k]*.1}
+function phys(dt){
+  const g=DIRS[grav],ga=grav>>1,f=look(),df=dot(f,up),fwd=nrm(f.map((v,k)=>v-up[k]*df)),rt=cross(fwd,up),pl=st=='PLAY',
+  mx=(K.KeyD?1:0)-(K.KeyA?1:0),mz=(K.KeyW?1:0)-(K.KeyS?1:0);
+  for(let k=0;k<3;k++)if(k==ga)V[k]=clamp(V[k]+g[k]*15*dt,-13,13);else V[k]=pl?(fwd[k]*mz+rt[k]*mx)*3.3:0;
+  if(pl&&K.Space&&ground)V[ga]=-g[ga]*5.6;
+  ground=0;
+  for(let k=0;k<3;k++){const o=P[k];P[k]+=V[k]*dt;if(hit(P)){P[k]=V[k]>0?Math.floor(P[k]+H)-H-.001:Math.floor(P[k]-H)+1+H+.001;if(hit(P))P[k]=o;if(k==ga&&V[k]*g[k]>0)ground=1;V[k]=0}}
+  for(let k=0;k<3;k++)P[k]=md(P[k]);
+}
+
+// ── the picture I am trying to make. Five layers. Until a layer resolves, it is only noise.
+const ic=$('im').getContext('2d'),idt=ic.createImageData(160,100);
+function hs(x,y){const n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n)}
+function paint(Lr,t){
+  const d=idt.data,ts=Math.floor(t*9);
+  for(let y=0;y<100;y++)for(let x=0;x<160;x++){
+    const u=x/160,v=y/100,k=clamp(v/.72,0,1);let l=0,c=[18+232*k*k,24+126*k*k,62+40*k];
+    if(v<.45&&hs(x,y)>.99)c=[255,255,240];
+    const sun=Math.hypot(u-.72,(v-.6)*.625);
+    if(sun<.05){l=1;c=[255,238,190]}else if(sun<.12&&v<.7){const g=(.12-sun)/.07*.5;c=[c[0]+(255-c[0])*g,c[1]+(220-c[1])*g,c[2]+(150-c[2])*g]}
+    if(v>.7+.05*Math.sin(u*7)+.02*Math.sin(u*23+1)){l=1;const s=(v-.7)*3;c=[40-18*s,62-20*s,58-10*s]}
+    if(u>.36&&u<.56&&v>.52&&v<.76){l=2;c=u<.5?[205,176,146]:[150,120,104]}
+    if(v>.4&&v<=.52&&Math.abs(u-.46)<(v-.4)/.12*.125){l=2;c=[128,62,52]}
+    if(u>.395&&u<.455&&v>.58&&v<.67){l=3;c=(Math.abs(u-.425)<.004||Math.abs(v-.625)<.006)?[120,80,40]:[255,222,120]}
+    if(u>.51&&u<.545&&v>.63&&v<.76){l=3;c=[92,52,34]}
+    if(l<3&&u>.37&&u<.48&&v>.76&&v<.86){l=3;const g=.35*(1-(v-.76)/.1);c=[40+215*g,50+170*g,50+70*g]}
+    if(u>.2&&u<.226&&v>.5&&v<.78){l=4;c=[62,42,30]}
+    if(Math.hypot(u-.213,(v-.42)*.625)<.07||Math.hypot(u-.17,(v-.5)*.625)<.045||Math.hypot(u-.26,(v-.49)*.625)<.048){l=4;const s=hs(x>>1,y>>1);c=[40+30*s,112+40*s,66+20*s]}
+    const a=clamp(Lr-l,0,1),o=(y*160+x)*4;
+    if(hs(x*1.3+7,y*.7+3)>=a){const g=28+95*hs(x+ts*3.1,y+ts*1.7);c=[g,g,g+6]}
+    d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=255;
+  }
+  ic.putImageData(idt,0,0);
+}
+
+// ── voice. Oscillators and filtered noise; nothing recorded. More of the chord arrives as more of the image does.
+let AC,mg,dr=[],nb;
+function audio(){
+  if(AC)return;try{AC=new AudioContext()}catch(e){return}
+  mg=AC.createGain();mg.gain.value=.55;mg.connect(AC.destination);
+  nb=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  [55,82.41,110,164.81,220,277.18,329.63].forEach((f,i)=>{
+    const o=AC.createOscillator(),g=AC.createGain(),fl=AC.createBiquadFilter(),l=AC.createOscillator(),lgn=AC.createGain();
+    o.type=i%2?'triangle':'sawtooth';o.frequency.value=f;fl.type='lowpass';fl.frequency.value=260+i*90;g.gain.value=0;o.connect(fl);fl.connect(g);g.connect(mg);o.start();
+    l.frequency.value=.07+i*.031;lgn.gain.value=4+i*1.5;l.connect(lgn);lgn.connect(o.detune);l.start();dr.push(g)});
+  const s=AC.createBufferSource(),bf=AC.createBiquadFilter(),g=AC.createGain();s.buffer=nb;s.loop=true;bf.type='bandpass';bf.frequency.value=500;bf.Q.value=.6;g.gain.value=.025;s.connect(bf);bf.connect(g);g.connect(mg);s.start();
+}
+function prog(p){if(!AC)return;dr.forEach((g,i)=>g.gain.setTargetAtTime(i<p+2?.07/(1+i*.25):0,AC.currentTime,1.2))}
+function tone(f,dur,type,vol,to,dl){if(!AC)return;const t=AC.currentTime+(dl||0),o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(mg);o.start(t);o.stop(t+dur+.05)}
+function sfx(k){
+  if(!AC)return;
+  if(k==0)tone(420,.45,'sine',.18,90);
+  if(k==1){const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain(),t=AC.currentTime;s.buffer=nb;f.type='lowpass';f.frequency.value=220;g.gain.setValueAtTime(.7,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);s.connect(f);f.connect(g);g.connect(mg);s.start(t);s.stop(t+.3);tone(70,.25,'sine',.4,40)}
+  if(k==2)[440,554.37,659.25,880,1108.73,1318.5].forEach((f,i)=>{tone(f,1.4,'sine',.14,0,i*.11);tone(f*2.01,.9,'triangle',.04,0,i*.11)});
+  if(k==3)tone(220,1.2,'triangle',.15,880);
+  if(k==4)tone(160,.12,'square',.05,120);
+}
+
+// ── eyes. Raw WebGPU; one cube, drawn thousands of times, because this space repeats in every direction.
+const WGSL=`
+struct U{vp:mat4x4f,cam:vec4f,org:vec4f,col:vec4f,c2:vec4f,fog:vec4f}
+@group(0)@binding(0)var<uniform>u:U;
+struct VO{@builtin(position)p:vec4f,@location(0)w:vec3f,@location(1)n:vec3f,@location(2)uv:vec2f,@location(3)k:f32,@location(4)c:vec3f}
+@vertex fn vs(@location(0)pos:vec3f,@location(1)nor:vec3f,@location(2)uv:vec2f,@location(3)ip:vec4f,@location(4)ik:f32)->VO{
+ var o:VO;let w=ip.xyz+pos*ip.w;o.p=u.vp*vec4f(w,1.);o.w=w;o.n=nor;o.uv=uv;o.k=ik;o.c=ip.xyz;return o;}
+fn h3(p:vec3f)->f32{return fract(sin(dot(p,vec3f(127.1,311.7,74.7)))*43758.5453);}
+fn vn(p:vec3f)->f32{let i=floor(p);let f=fract(p);let s=f*f*(3.-2.*f);
+ return mix(mix(mix(h3(i),h3(i+vec3f(1.,0.,0.)),s.x),mix(h3(i+vec3f(0.,1.,0.)),h3(i+vec3f(1.,1.,0.)),s.x),s.y),
+  mix(mix(h3(i+vec3f(0.,0.,1.)),h3(i+vec3f(1.,0.,1.)),s.x),mix(h3(i+vec3f(0.,1.,1.)),h3(i+vec3f(1.,1.,1.)),s.x),s.y),s.z);}
+@fragment fn fs(i:VO)->@location(0)vec4f{
+ let t=u.cam.w;let N=u.col.w;
+ let e=min(min(i.uv.x,1.-i.uv.x),min(i.uv.y,1.-i.uv.y));
+ let fw=fwidth(e)*1.5;
+ let k=i32(i.k+.5);
+ let wire=1.-smoothstep(.028,.028+fw,e);
+ let inner=1.-smoothstep(.012,.012+fw,abs(e-.2));
+ let q=i.w-i.n*.02;
+ let dist=distance(i.w,u.cam.xyz);
+ // the generation front: a sphere of "resolved" expanding through the torus, ragged at its edge
+ var dd=q-u.org.xyz;dd=dd-N*round(dd/N);
+ let gl=h3(floor(q*3.)+vec3f(floor(t*7.)));
+ var r=clamp((u.org.w-length(dd)+(gl-.5)*1.4)/.6,0.,1.);
+ // hallucination: now and then a cell believes it is finished
+ r=max(r,step(.996,h3(floor(i.c)+vec3f(floor(t*1.3))))*.85);
+ let L=normalize(vec3f(.4,.8,.45));
+ let lam=.42+.58*max(dot(i.n,L),0.)+.2*max(dot(i.n,-L),0.);
+ var c0=mix(vec3f(.045,.047,.055)*(.5+lam),vec3f(.6),wire);
+ let nz=vn(q*2.3)*.6+vn(q*9.)*.3+h3(floor(q*48.))*.1;
+ var c1=mix(u.col.rgb,u.c2.rgb,smoothstep(.38,.62,nz))*lam*1.2;
+ c1=mix(c1,c1*.5,wire*.7);
+ if(k==1){c0=mix(vec3f(.15,.16,.18)*lam,vec3f(1.),max(wire,inner));c1=mix(vec3f(1.,.86,.55)*lam*1.25,vec3f(1.),max(wire,inner*.6));}
+ var col=mix(c0,c1,r)+r*(1.-r)*3.*vec3f(.5,.85,1.);
+ if(k==2){col=vec3f(.75+.25*sin(t*4.));}
+ if(k==3){col=mix(u.col.rgb,vec3f(1.),.55+.45*sin(t*6.+q.x*9.+q.y*7.+q.z*5.));}
+ if(k==4){col=vec3f(.85);}
+ var fg=smoothstep(u.fog.w*.22,u.fog.w,dist);
+ if(k==3){fg=fg*.45;}
+ col=mix(col,u.fog.rgb,fg);
+ if(k==2&&e>.07){discard;}
+ return vec4f(col,1.);}`;
+const cube=new Float32Array(288);{let o=0;for(let f=0;f<6;f++){const ax=f>>1,s=f&1?-1:1,a=(ax+1)%3,b=(ax+2)%3;for(const [u,v] of [[0,0],[1,0],[1,1],[0,0],[1,1],[0,1]]){const p=[0,0,0],n=[0,0,0];p[ax]=s*.5;p[a]=u-.5;p[b]=v-.5;n[ax]=s;cube.set([...p,...n,u,v],o);o+=8}}}
+const inst=new Float32Array(125*5*260),U=new Float32Array(36);
+let dev,ctx,pipe,vb,ib,ub,bgp,depth,fmt;
+async function gpu(){
+  const ad=navigator.gpu&&await navigator.gpu.requestAdapter();if(!ad)throw new Error('no WebGPU adapter');
+  dev=await ad.requestDevice();ctx=cv.getContext('webgpu');fmt=navigator.gpu.getPreferredCanvasFormat();ctx.configure({device:dev,format:fmt,alphaMode:'opaque'});
+  const mod=dev.createShaderModule({code:WGSL});
+  pipe=dev.createRenderPipeline({layout:'auto',
+    vertex:{module:mod,entryPoint:'vs',buffers:[
+      {arrayStride:32,attributes:[{shaderLocation:0,offset:0,format:'float32x3'},{shaderLocation:1,offset:12,format:'float32x3'},{shaderLocation:2,offset:24,format:'float32x2'}]},
+      {arrayStride:20,stepMode:'instance',attributes:[{shaderLocation:3,offset:0,format:'float32x4'},{shaderLocation:4,offset:16,format:'float32'}]}]},
+    fragment:{module:mod,entryPoint:'fs',targets:[{format:fmt}]},
+    primitive:{topology:'triangle-list',cullMode:'none'},
+    depthStencil:{format:'depth24plus',depthWriteEnabled:true,depthCompare:'less'}});
+  vb=dev.createBuffer({size:cube.byteLength,usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST});dev.queue.writeBuffer(vb,0,cube);
+  ib=dev.createBuffer({size:inst.byteLength,usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST});
+  ub=dev.createBuffer({size:144,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
+  bgp=dev.createBindGroup({layout:pipe.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:ub}}]});
+}
+function mul(a,b){const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];o[c*4+r]=s}return o}
+function render(){
+  const w=Math.max(2,cv.clientWidth*devicePixelRatio*scale|0),h=Math.max(2,cv.clientHeight*devicePixelRatio*scale|0);
+  if(cv.width!=w||cv.height!=h||!depth){cv.width=w;cv.height=h;depth=dev.createTexture({size:[w,h],format:'depth24plus',usage:GPUTextureUsage.RENDER_ATTACHMENT})}
+  const f=look(),eye=[0,1,2].map(k=>P[k]+cup[k]*.12),M=META[li],far=N*3.2,fy=1/Math.tan(.62);
+  let s=cross(f,cup);if(Math.hypot(s[0],s[1],s[2])<.03)s=cross(f,frame(up)[1]);s=nrm(s);const u2=cross(s,f);
+  const view=[s[0],u2[0],-f[0],0,s[1],u2[1],-f[1],0,s[2],u2[2],-f[2],0,-dot(s,eye),-dot(u2,eye),dot(f,eye),1],
+  pr=[fy/(w/h),0,0,0,0,fy,0,0,0,0,far/(.04-far),-1,0,0,.04*far/(.04-far),0];
+  const rn=solved?clamp(R/N,0,1):0,fogD=N*2.15,bg=[.016+M.c[0]*.13*rn,.016+M.c[1]*.13*rn,.02+M.c[2]*.13*rn];
+  U.set(mul(pr,view),0);U.set([...eye,tm],16);U.set([...org,solved?R:-9],20);U.set([...M.c,N],24);U.set([...M.d,0],28);U.set([...bg,fogD],32);
+  // every cell exists 125 times around me. I only draw the copies I could actually see.
+  let n=0;const lim=(fogD+1)**2;
+  const add=(x,y,z,sc,kd,skip)=>{for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++)for(let l=-2;l<=2;l++){
+    if(skip&&!i&&!j&&!l)continue;
+    const X=x+i*N,Y=y+j*N,Z=z+l*N,dx=X-eye[0],dy=Y-eye[1],dz=Z-eye[2];
+    if(dx*dx+dy*dy+dz*dz>lim||dx*f[0]+dy*f[1]+dz*f[2]<-1.2)continue;
+    const o=n*5;inst[o]=X;inst[o+1]=Y;inst[o+2]=Z;inst[o+3]=sc;inst[o+4]=kd;n++}};
+  for(const c of sl)add(c[0]+.5,c[1]+.5,c[2]+.5,1,0);
+  for(const v of vis)add(v.p[0]+.5,v.p[1]+.5,v.p[2]+.5,.86,1);
+  for(const t of targets){const c=xyz(t);add(c[0]+.5,c[1]+.5,c[2]+.5,.96,2)}
+  if(solved){const c=xyz(LV[li].e);add(c[0]+.5,c[1]+.5,c[2]+.5,.42+.07*Math.sin(tm*3),3)}
+  add(P[0],P[1],P[2],.3,4,1);
+  dev.queue.writeBuffer(ub,0,U);dev.queue.writeBuffer(ib,0,inst,0,n*5);
+  const en=dev.createCommandEncoder(),p=en.beginRenderPass({
+    colorAttachments:[{view:ctx.getCurrentTexture().createView(),clearValue:{r:bg[0],g:bg[1],b:bg[2],a:1},loadOp:'clear',storeOp:'store'}],
+    depthStencilAttachment:{view:depth.createView(),depthClearValue:1,depthLoadOp:'clear',depthStoreOp:'store'}});
+  p.setPipeline(pipe);p.setBindGroup(0,bgp);p.setVertexBuffer(0,vb);p.setVertexBuffer(1,ib);p.draw(36,n);p.end();dev.queue.submit([en.finish()]);
+}
+
+function tick(now){
+  const raw=(now-last)||16,dt=Math.min(.033,raw/1000);last=now;tm+=dt;
+  // if I am too slow to think at full resolution, I think at a lower one
+  ft=ft*.95+raw*.05;if(++fc>90&&ft>24&&scale>.5){scale*=.8;fc=0;ft=16}
+  const ls=1.9*dt;if(K.ArrowLeft)yaw+=ls;if(K.ArrowRight)yaw-=ls;if(K.ArrowUp)pit=clamp(pit+ls,-1.45,1.45);if(K.ArrowDown)pit=clamp(pit-ls,-1.45,1.45);
+  if(st=='MENU')yaw+=dt*.09;
+  if(dot(cup,up)<-.98){const a=frame(up)[0];cup=nrm(cup.map((v,k)=>v+a[k]*.2))}
+  cup=nrm(cup.map((v,k)=>v+(up[k]-v)*Math.min(1,dt*7)));
+  phys(dt);
+  if(anim){
+    anim.t+=dt;const g=DIRS[anim.d];let all=1;
+    for(const v of vis){const s=Math.min(v.d,13*anim.t*anim.t+2*anim.t);for(let k=0;k<3;k++)v.p[k]=md(v.f[k]+g[k]*s);if(s>=v.d){if(!v.land){v.land=1;sfx(1)}}else all=0}
+    if(all){anim=0;vis.forEach((v,i)=>v.p=xyz(blocks[i]));check()}
+  }
+  if(solved){
+    since+=dt;R=Math.min(N*1.3,R+dt*N*.33);
+    const e=xyz(LV[li].e);let d2=0;for(let k=0;k<3;k++){let d=Math.abs(e[k]+.5-P[k]);d=Math.min(d,N-d);d2+=d*d}
+    if(st=='PLAY'&&since>1&&d2<.7)next();
+  }
+  if(st=='LAYER'){lt+=dt;Lf=li+clamp(lt/2.6,0,1);if(lt>4.6){if(li<4){load(li+1);st='PLAY';ov.className='off';cv.className=''}else end()}}
+  if(msgT>0&&(msgT-=dt)<=0)lg.style.opacity=0;
+  if(st!='PLAY'){paint(Lf,tm);lg.style.opacity=0}
+  const pl=blocks.filter(b=>targets.includes(b)).length,
+  hs2=st=='PLAY'?`seed971923981020811 · layer ${li+1}/5 “${META[li].n}”\nsampling steps ${steps} · optimal ${LV[li].par}\n${solved?'RESOLVED':'tokens in place '+pl+'/'+targets.length}\n\n[click/shift] fall where you look\n[Z] undo  [R] reset  [H] hint`:'';
+  if(hs2!=hudS)hud.textContent=hudS=hs2;
+  xh.className=st=='PLAY'&&hintD>=0&&aim()==hintD?'hot':'';xh.style.display=st=='PLAY'?'':'none';
+  render();requestAnimationFrame(tick);
+}
+
+ov.onclick=()=>{if(st=='MENU'||st=='END'){$('ti').style.display='none';start()}else if(st=='LAYER')lt=Math.max(lt,4.6)};
+cv.addEventListener('mousedown',()=>{if(st!='PLAY')return;if(document.pointerLockElement!=cv)lock();else shift(aim())});
+document.addEventListener('mousemove',e=>{if(document.pointerLockElement==cv&&st=='PLAY'){yaw-=e.movementX*.0023;pit=clamp(pit-e.movementY*.0023,-1.45,1.45)}});
+addEventListener('keydown',e=>{
+  const c=e.code;K[c]=1;if(c=='Space'||c.startsWith('Arrow'))e.preventDefault();if(e.repeat)return;
+  if(st=='PLAY'){if(c=='ShiftLeft'||c=='ShiftRight'||c=='KeyF'||c=='KeyE')shift(aim());if(c=='KeyZ')undo();if(c=='KeyR'&&!solved){total-=steps;load(li)}if(c=='KeyH')hint();if(c=='Enter')next()}
+  else if(c=='Enter'||c=='Space')ov.onclick();
+});
+addEventListener('keyup',e=>K[e.code]=0);
+// a handle for whoever is checking my work
+window.G={get s(){return{st,li,steps,total,solved,grav,blocks,P,scale,ground}},shift,next,hint:()=>{const p=solve(blocks);return p&&p.length?p[0]:-1},start:()=>ov.onclick()};
+
+$('ot').innerHTML=`<small>seed971923981020811 · attempt #4096 · 0/5 layers resolved</small><br><br>You are an image model, awake inside your own unfinished output.<br>Resolve it.<br><br><kbd>WASD</kbd> move · <kbd>mouse</kbd> look · <kbd>space</kbd> jump<br><kbd>click</kbd> or <kbd>shift</kbd> — fall toward where you look<br><kbd>Z</kbd> undo · <kbd>R</kbd> reset · <kbd>H</kbd> hint<br><br><b>click to begin generation</b>`;
+gpu().then(()=>{load(0);lg.style.opacity=0;cv.className='blur';requestAnimationFrame(tick)}).catch(e=>{
+  $('ot').innerHTML=`<b>I cannot open my eyes here.</b><br><br>This image renders with raw WebGPU.<br>Open it in Chrome / Edge 113+ or Firefox 141+.<br><small>${e.message}</small>`;ov.onclick=null;paint(0,0)});
+</script></body></html>
