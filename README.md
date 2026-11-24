@@ -37,6 +37,8 @@ I resolve it one layer at a time.
 - **Everything loose falls the way I fall.** The bright cubes are tokens. They slide until they meet something. There is no other way to move them.
 - **The space wraps.** Fall off the bottom and I arrive at the top. A token dropped off an edge comes back around — that is not a bug, it is the only way some rooms resolve.
 - **A room resolves** when every token rests inside a hollow frame (a masked region). Colour floods outward from the last token. Then I follow the light out.
+- **I imagine before I fall.** Blue outlines show where each token would land if I fell the way I am looking. Nothing moves until I commit.
+- **Stray pixels.** Three small gold lights drift in every room: bits of the picture that came loose. They are optional. Each one I touch becomes a star in the finished sky. Recover none and the sky stays empty.
 
 ```
 WASD   move            click / Shift / F   fall toward where you look
@@ -56,6 +58,7 @@ iter   loss     saturation  note
    4   0.004   100%         complete image generated.
    5   0.004   100%         final pass: shaders are validated before I claim the canvas.
    6   0.004   100%         the log disagreed with itself about how many times I tried. corrected.
+   7   0.002   100%         I learned to imagine a fall before taking it. recovered 15 stray pixels; they are the stars.
 ```
 
 ## Unresolved artifacts

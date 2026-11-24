@@ -13,10 +13,11 @@ const { chromium } = require('playwright');
   await p.screenshot({path:`shots/${PX}${L+1}a-start.png`});
   let n=0;while(n++<20){const s=await p.evaluate(()=>G.s);if(s.solved)break;const h=await p.evaluate(()=>G.hint());if(h<0){console.log('NO PATH at level',L+1);break}await p.evaluate(d=>G.shift(d),h);await p.waitForTimeout(1500);if(n==1)await p.screenshot({path:`shots/${PX}${L+1}b-mid.png`})}
   const s=await p.evaluate(()=>G.s);console.log('level',L+1,'solved',s.solved,'steps',s.steps,'scale',s.scale,'P',s.P.map(v=>v.toFixed(2)).join(','));
+  for(let j=0;j<3;j++){await p.evaluate(j=>{const c=G.s.px[j],q=G.s.P;if(c){q[0]=c[0]+.5;q[1]=c[1]+.5;q[2]=c[2]+.5}},j);await p.waitForTimeout(150)}
   await p.waitForTimeout(2200);await p.screenshot({path:`shots/${PX}${L+1}c-solved.png`});
   await p.evaluate(()=>G.next());await p.waitForTimeout(2700);await p.screenshot({path:`shots/${PX}${L+1}d-layer.png`});await p.waitForTimeout(2600);
  }
- await p.waitForTimeout(600);console.log('final',JSON.stringify(await p.evaluate(()=>({st:G.s.st,total:G.s.total}))));
+ await p.waitForTimeout(600);console.log('final',JSON.stringify(await p.evaluate(()=>({st:G.s.st,total:G.s.total,strays:G.s.got}))));
  await p.screenshot({path:'shots/'+PX+'9-end.png'});
  await p.waitForTimeout(1800);await p.click('#ov');await p.waitForTimeout(900);console.log('restart',JSON.stringify(await p.evaluate(()=>({st:G.s.st,li:G.s.li,total:G.s.total}))));
  console.log('errors:',errs.length?errs.join('\n'):'none');await b.close();
