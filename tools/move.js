@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 (async()=>{
  const b=await chromium.launch({channel:'chromium',args:['--enable-unsafe-webgpu','--enable-gpu']});
  const p=await b.newPage({viewport:{width:1280,height:720}});const errs=[];p.on('console',m=>{if(m.type()=='error'||m.type()=='warning')errs.push(m.text())});p.on('pageerror',e=>errs.push('PAGEERR '+e.message));
- await p.goto('file:///D:/Projects/Untitled/index.html');await p.waitForTimeout(800);await p.click('#ov');await p.waitForTimeout(600);
+ await p.goto('file:///'+require('path').resolve(__dirname,'..','index.html').split(String.fromCharCode(92)).join('/'));await p.waitForTimeout(800);await p.click('#ov');await p.waitForTimeout(600);
  const P=async t=>console.log(t,(await p.evaluate(()=>G.s.P)).map(v=>v.toFixed(2)).join(','),'ground',await p.evaluate(()=>G.s.ground));
  await P('spawn');await p.keyboard.down('KeyW');await p.waitForTimeout(500);await p.keyboard.up('KeyW');await P('after W');
  await p.keyboard.down('KeyD');await p.waitForTimeout(400);await p.keyboard.up('KeyD');await P('after D');

@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
  const b=await chromium.launch(GLM?{}:{channel:'chromium',args:['--enable-unsafe-webgpu','--enable-gpu','--autoplay-policy=no-user-gesture-required']});
  const p=await b.newPage({viewport:{width:1280,height:720}});
  const errs=[];p.on('console',m=>{if(m.type()=='error'||m.type()=='warning')errs.push(m.text())});p.on('pageerror',e=>errs.push('PAGEERR '+e.message));
- await p.goto('file:///D:/Projects/Untitled/index.html');await p.waitForTimeout(1500);
+ await p.goto('file:///'+require('path').resolve(__dirname,'..','index.html').split(String.fromCharCode(92)).join('/'));await p.waitForTimeout(1500);
  await p.screenshot({path:'shots/'+PX+'0-menu.png'});
  await p.click('#ov');await p.waitForTimeout(1200);
  console.log(GLM?'WEBGL2 run':'WEBGPU run','after start',JSON.stringify(await p.evaluate(()=>G.s)));
@@ -18,5 +18,6 @@ const { chromium } = require('playwright');
  }
  await p.waitForTimeout(600);console.log('final',JSON.stringify(await p.evaluate(()=>({st:G.s.st,total:G.s.total}))));
  await p.screenshot({path:'shots/'+PX+'9-end.png'});
+ await p.waitForTimeout(1800);await p.click('#ov');await p.waitForTimeout(900);console.log('restart',JSON.stringify(await p.evaluate(()=>({st:G.s.st,li:G.s.li,total:G.s.total}))));
  console.log('errors:',errs.length?errs.join('\n'):'none');await b.close();
 })();

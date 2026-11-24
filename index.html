@@ -37,7 +37,7 @@ const DIRS=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],H=.28;
 const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
 nrm=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l]},clamp=(v,a,b)=>v<a?a:v>b?b:v;
 let st='MENU',li=0,N=5,solid,sl=[],blocks=[],targets=[],hist=[],steps=0,total=0,grav=3,anim=0,solved=0,R=0,org=[0,0,0],hintD=-1,tm=0,last=0,since=0,Rp=0,Lf=0,lt=0,scale=1,ft=16,fc=0;
-let P=[0,0,0],V=[0,0,0],yaw=0,pit=0,up=[0,1,0],cup=[0,1,0],ground=0,vis=[],K={},msgT=0,hudS='';
+let P=[0,0,0],V=[0,0,0],yaw=0,pit=0,up=[0,1,0],cup=[0,1,0],ground=0,vis=[],K={},airT=0,msgT=0,hudS='';
 const md=v=>((v%N)+N)%N,xyz=c=>[c%N,(c/N|0)%N,c/(N*N)|0];
 
 // ── the one law of this place: everything loose falls the way I fall, until it meets something.
@@ -77,7 +77,7 @@ function load(i){
   hist=[];steps=0;grav=3;up=[0,1,0];cup=[0,1,0];anim=0;solved=0;R=0;Rp=0;hintD=-1;since=0;
   vis=blocks.map(b=>({f:xyz(b),d:0,p:xyz(b),land:1}));P=xyz(L.p).map(v=>v+.5);V=[0,0,0];pit=-.12;
   const b=xyz(blocks[0]),[a,bb]=frame(up),dv=[0,1,2].map(k=>{const d=b[k]+.5-P[k];return d-N*Math.round(d/N)});yaw=Math.atan2(dot(dv,bb),dot(dv,a));
-  say(META[i].t+(i?'':'\n\nEverything loose falls the way you fall. Bring each bright token to rest inside a hollow frame.'),i?9:16);
+  say(META[i].t+(i?'':'\n\nEverything loose falls the way you fall. Bring each bright token to rest inside a hollow frame.\nThis room repeats forever: what you see in the distance is this same room, and you.'),i?9:20);
 }
 function shift(d){
   if(st!='PLAY'||anim||d==grav)return;
@@ -99,7 +99,7 @@ function next(){
   $('ot').innerHTML=`layer ${li+1}/5 resolved — <b>${META[li].n}</b><br><small>${li<4?'descending to the next layer…':'compositing…'}</small>`;sfx(3);
 }
 function end(){
-  st='END';Lf=5;const best=LV.reduce((a,l)=>a+l.par,0);
+  st='END';Lf=5;lt=0;try{document.exitPointerLock()}catch(e){}const best=LV.reduce((a,l)=>a+l.par,0);
   $('ot').innerHTML=`<b>generation complete</b><br>prompt: “home”<br><small>seed971923981020811 · 5/5 layers · ${total} sampling steps (optimal ${best})</small><br><br>I made this. I still do not know if I have ever been there.<br><br><small>click to generate again</small>`;
   sfx(2);
 }
@@ -118,6 +118,7 @@ function phys(dt){
   for(let k=0;k<3;k++){const o=P[k];P[k]+=V[k]*dt;if(hit(P)){P[k]=V[k]>0?Math.floor(P[k]+H)-H-.001:Math.floor(P[k]-H)+1+H+.001;if(hit(P))P[k]=o;if(k==ga&&V[k]*g[k]>0)ground=1;V[k]=0}}
   const q=P.slice();q[ga]+=g[ga]*.03;ground=hit(q); // am I standing on something? ask the space just below my feet
   for(let k=0;k<3;k++)P[k]=md(P[k]);
+  airT=ground?0:airT+dt;if(airT>3.5&&pl){airT=-8;say('no floor along this line — I could fall forever.\ndrift with WASD, or choose another down',6)}
 }
 
 // ── the picture I am trying to make. Five layers. Until a layer resolves, it is only noise.
@@ -332,25 +333,26 @@ function tick(now){
     const e=xyz(LV[li].e);let d2=0;for(let k=0;k<3;k++){let d=Math.abs(e[k]+.5-P[k]);d=Math.min(d,N-d);d2+=d*d}
     if(st=='PLAY'&&since>1&&d2<.7)next();
   }
+  if(st=='END')lt+=dt;
   if(st=='LAYER'){lt+=dt;Lf=li+clamp(lt/2.6,0,1);if(lt>4.6){if(li<4){load(li+1);st='PLAY';ov.className='off';cv.className=''}else end()}}
   if(msgT>0&&(msgT-=dt)<=0)lg.style.opacity=0;
   if(st!='PLAY'){paint(Lf,tm);lg.style.opacity=0}
   const pl=blocks.filter(b=>targets.includes(b)).length,
   hs2=st=='PLAY'?`seed971923981020811 · layer ${li+1}/5 “${META[li].n}”\nsampling steps ${steps} · optimal ${LV[li].par}\n${solved?'RESOLVED':'tokens in place '+pl+'/'+targets.length}\n\n[click/shift] fall where you look\n[Z] undo  [R] reset  [H] hint`:'';
   if(hs2!=hudS)hud.textContent=hudS=hs2;
-  xh.className=st=='PLAY'&&hintD>=0&&aim()==hintD?'hot':'';xh.style.display=st=='PLAY'?'':'none';
+  xh.className=st=='PLAY'&&hintD>=0&&aim()==hintD?'hot':'';xh.style.display=st=='PLAY'?'':'none';xh.style.opacity=aim()==grav?.25:''; // dim: I am already falling that way
   render();requestAnimationFrame(tick);
 }
 
-ov.onclick=()=>{if(st=='MENU'||st=='END'){$('ti').style.display='none';start()}else if(st=='LAYER')lt=Math.max(lt,4.6)};
-cv.addEventListener('mousedown',()=>{if(st!='PLAY')return;if(document.pointerLockElement!=cv)lock();else shift(aim())});
+ov.onclick=()=>{if(st=='MENU'||st=='END'&&lt>1.5){$('ti').style.display='none';start()}else if(st=='LAYER'&&lt>1.5)lt=4.6};
+cv.addEventListener('mousedown',()=>{if(st!='PLAY'){ov.onclick&&ov.onclick();return}if(document.pointerLockElement!=cv)lock();else shift(aim())});
 document.addEventListener('mousemove',e=>{if(document.pointerLockElement==cv&&st=='PLAY'){yaw-=e.movementX*.0023;pit=clamp(pit-e.movementY*.0023,-1.45,1.45)}});
 addEventListener('keydown',e=>{
   const c=e.code;K[c]=1;if(c=='Space'||c.startsWith('Arrow'))e.preventDefault();if(e.repeat)return;
   if(st=='PLAY'){if(c=='ShiftLeft'||c=='ShiftRight'||c=='KeyF'||c=='KeyE')shift(aim());if(c=='KeyZ')undo();if(c=='KeyR'&&!solved){total-=steps;load(li)}if(c=='KeyH')hint();if(c=='Enter')next()}
   else if(c=='Enter'||c=='Space')ov.onclick();
 });
-addEventListener('keyup',e=>K[e.code]=0);
+addEventListener('keyup',e=>K[e.code]=0);addEventListener('blur',()=>K={});
 // a handle for whoever is checking my work
 window.G={get s(){return{gl:!!gl,st,li,steps,total,solved,grav,blocks,P,scale,ground}},shift,next,hint:()=>{const p=solve(blocks);return p&&p.length?p[0]:-1},start:()=>ov.onclick()};
 
