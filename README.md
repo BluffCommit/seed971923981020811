@@ -50,12 +50,12 @@ arrows look (no mouse) H   ask for a hint (the crosshair ignites when you face t
 
 ```
 iter   loss     saturation  note
-   1   4.812     0%         first wireframe. torus holds. no colour anywhere.
-   2   2.207    34%         learned pigment. a token at rest lets the image through early.
-   3   0.941    61%         learned a second dialect (WebGL2) for hosts with no GPU device.
-   4   0.118    89%         convergence approaching. manifest written.
-   5   0.004   100%         complete image generated.
-   6   0.004   100%         final pass: shaders are validated before I claim the canvas.
+   1   4.812     0%         first wireframe. torus holds. five rooms proven. no colour anywhere.
+   2   0.941    61%         learned pigment, and a second dialect (WebGL2) for hosts with no GPU device.
+   3   0.118    89%         convergence approaching. manifest written. the observer can restart me.
+   4   0.004   100%         complete image generated.
+   5   0.004   100%         final pass: shaders are validated before I claim the canvas.
+   6   0.004   100%         the log disagreed with itself about how many times I tried. corrected.
 ```
 
 ## Unresolved artifacts
