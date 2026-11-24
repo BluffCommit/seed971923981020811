@@ -13,5 +13,6 @@ const { chromium } = require('playwright');
  await p.keyboard.press('KeyZ');await p.waitForTimeout(800);await P('after undo');
  const h=await p.evaluate(()=>G.hint());await p.evaluate(d=>G.shift(d),h);await p.waitForTimeout(1500);await p.screenshot({path:'shots/m-part.png'});
  const h2=await p.evaluate(()=>G.hint());await p.evaluate(d=>G.shift(d),h2);await p.waitForTimeout(2500);await p.screenshot({path:'shots/m-solved.png'});
+ await p.evaluate(()=>{const L=LV[G.s.li],N=L.n,e=L.e,q=G.s.P;q[0]=e%N+.5;q[1]=(e/N|0)%N+.5;q[2]=(e/(N*N)|0)+.5});await p.waitForTimeout(700);console.log('portal touch ->',await p.evaluate(()=>G.s.st));
  console.log('errors:',errs.length?errs.join('\n'):'none');await b.close();
 })();

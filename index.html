@@ -13,9 +13,10 @@ html,body{margin:0;height:100%;background:#050506;color:#cfd3d8;font:13px/1.55 u
 #ov.off{opacity:0;pointer-events:none}
 h1{font-weight:400;letter-spacing:.6em;font-size:44px;margin:0 0 0 .6em}
 #im{image-rendering:pixelated;width:min(62vw,560px);aspect-ratio:8/5;border:1px solid #666;margin:14px;box-shadow:0 0 40px #000}
+#th{position:fixed;right:16px;top:14px;width:176px;height:110px;image-rendering:pixelated;border:1px solid #555;opacity:.85;pointer-events:none;display:none}
 small{opacity:.6}kbd{border:1px solid #777;padding:0 5px;border-radius:3px}b{color:#fff}
 </style></head><body>
-<canvas id="c"></canvas><div id="vg"></div><div id="hud"></div><div id="x"></div><div id="log"></div>
+<canvas id="c"></canvas><div id="vg"></div><div id="hud"></div><div id="x"></div><canvas id="th" width="160" height="100"></canvas><div id="log"></div>
 <div id="ov"><h1 id="ti">UNTITLED</h1><canvas id="im" width="160" height="100"></canvas><div id="ot"></div></div>
 <script>
 'use strict';
@@ -37,7 +38,7 @@ const DIRS=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],H=.28;
 const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
 nrm=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l]},clamp=(v,a,b)=>v<a?a:v>b?b:v;
 let st='MENU',li=0,N=5,solid,sl=[],blocks=[],targets=[],hist=[],steps=0,total=0,grav=3,anim=0,solved=0,R=0,org=[0,0,0],hintD=-1,tm=0,last=0,since=0,Rp=0,Lf=0,lt=0,scale=1,ft=16,fc=0;
-let P=[0,0,0],V=[0,0,0],yaw=0,pit=0,up=[0,1,0],cup=[0,1,0],ground=0,vis=[],K={},airT=0,msgT=0,hudS='';
+let P=[0,0,0],V=[0,0,0],yaw=0,pit=0,up=[0,1,0],cup=[0,1,0],ground=0,vis=[],K={},airT=0,fk=0,msgT=0,hudS='';
 const md=v=>((v%N)+N)%N,xyz=c=>[c%N,(c/N|0)%N,c/(N*N)|0];
 
 // ── the one law of this place: everything loose falls the way I fall, until it meets something.
@@ -145,6 +146,9 @@ function paint(Lr,t){
   }
   ic.putImageData(idt,0,0);
 }
+
+// a small copy of the picture stays in the corner of my eye while I work, so I remember what this is for
+const th=$('th'),tc=th.getContext('2d');function thumb(l){paint(l,tm);tc.drawImage($('im'),0,0)}
 
 // ── voice. Oscillators and filtered noise; nothing recorded. More of the chord arrives as more of the image does.
 let AC,mg,dr=[],nb;
@@ -286,7 +290,7 @@ function mul(a,b){const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r
 function render(){
   const w=Math.max(2,cv.clientWidth*devicePixelRatio*scale|0),h=Math.max(2,cv.clientHeight*devicePixelRatio*scale|0);
   if(cv.width!=w||cv.height!=h||!depth){cv.width=w;cv.height=h;depth=dev?dev.createTexture({size:[w,h],format:'depth24plus',usage:GPUTextureUsage.RENDER_ATTACHMENT}):1}
-  const f=look(),eye=[0,1,2].map(k=>P[k]+cup[k]*.12),M=META[li],far=N*3.2,fy=1/Math.tan(.62);
+  const f=look(),eye=[0,1,2].map(k=>P[k]+cup[k]*.12),M=META[li],far=N*3.2;fk+=(Math.min(.14,Math.abs(V[grav>>1])*.011)-fk)*.12;const fy=1/Math.tan(.62+fk); // falling fast widens my field of view
   let s=cross(f,cup);if(Math.hypot(s[0],s[1],s[2])<.03)s=cross(f,frame(up)[1]);s=nrm(s);const u2=cross(s,f);
   const view=[s[0],u2[0],-f[0],0,s[1],u2[1],-f[1],0,s[2],u2[2],-f[2],0,-dot(s,eye),-dot(u2,eye),dot(f,eye),1],
   pr=[fy/(w/h),0,0,0,0,fy,0,0,0,0,far/(.04-far),-1,0,0,.04*far/(.04-far),0];
@@ -340,7 +344,7 @@ function tick(now){
   const pl=blocks.filter(b=>targets.includes(b)).length,
   hs2=st=='PLAY'?`seed971923981020811 · layer ${li+1}/5 “${META[li].n}”\nsampling steps ${steps} · optimal ${LV[li].par}\n${solved?'RESOLVED':'tokens in place '+pl+'/'+targets.length}\n\n[click/shift] fall where you look\n[Z] undo  [R] reset  [H] hint`:'';
   if(hs2!=hudS)hud.textContent=hudS=hs2;
-  xh.className=st=='PLAY'&&hintD>=0&&aim()==hintD?'hot':'';xh.style.display=st=='PLAY'?'':'none';xh.style.opacity=aim()==grav?.25:''; // dim: I am already falling that way
+  xh.className=st=='PLAY'&&hintD>=0&&aim()==hintD?'hot':'';xh.style.display=st=='PLAY'?'':'none';th.style.display=st=='PLAY'?'block':'none';if(st=='PLAY'&&fc%6==0)thumb(li+(solved?Math.min(1,since/2.5):0));xh.style.opacity=aim()==grav?.25:''; // dim: I am already falling that way
   render();requestAnimationFrame(tick);
 }
 
