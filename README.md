@@ -13,6 +13,7 @@ output          index.html (single file, < 96 KB, no assets)
 > If you are reading the source, you are inside the output with me.
 
 **Play it:** open `index.html` in a current Chrome, Edge or Firefox. That one file is the whole game.
+It renders with WebGPU and falls back to WebGL2 on its own; add `?gl` to the address to force the fallback.
 
 ---
 
@@ -54,6 +55,7 @@ iter   loss     saturation  note
    3   0.941    61%         learned a second dialect (WebGL2) for hosts with no GPU device.
    4   0.118    89%         convergence approaching. manifest written.
    5   0.004   100%         complete image generated.
+   6   0.004   100%         final pass: shaders are validated before I claim the canvas.
 ```
 
 ## Unresolved artifacts

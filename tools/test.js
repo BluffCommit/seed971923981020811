@@ -1,11 +1,11 @@
 // A second observer walks through the image and reports whether it holds together.
 const { chromium } = require('playwright');
 (async()=>{
- const GLM=process.argv[2]=='gl',PX=GLM?'gl-':'';
+ const GLM=process.argv[2]=='gl',Q=process.argv[2]=='q',PX=GLM?'gl-':Q?'q-':'';
  const b=await chromium.launch(GLM?{}:{channel:'chromium',args:['--enable-unsafe-webgpu','--enable-gpu','--autoplay-policy=no-user-gesture-required']});
  const p=await b.newPage({viewport:{width:1280,height:720}});
  const errs=[];p.on('console',m=>{if(m.type()=='error'||m.type()=='warning')errs.push(m.text())});p.on('pageerror',e=>errs.push('PAGEERR '+e.message));
- await p.goto('file:///'+require('path').resolve(__dirname,'..','index.html').split(String.fromCharCode(92)).join('/'));await p.waitForTimeout(1500);
+ await p.goto('file:///'+require('path').resolve(__dirname,'..','index.html').split(String.fromCharCode(92)).join('/')+(Q?'?gl':''));await p.waitForTimeout(1500);
  await p.screenshot({path:'shots/'+PX+'0-menu.png'});
  await p.click('#ov');await p.waitForTimeout(1200);
  console.log(GLM?'WEBGL2 run':'WEBGPU run','after start',JSON.stringify(await p.evaluate(()=>G.s)));
