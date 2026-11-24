@@ -38,7 +38,7 @@ const DIRS=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],H=.28;
 const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
 nrm=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l]},clamp=(v,a,b)=>v<a?a:v>b?b:v;
 let st='MENU',li=0,N=5,solid,sl=[],blocks=[],targets=[],hist=[],steps=0,total=0,grav=3,anim=0,solved=0,R=0,org=[0,0,0],hintD=-1,tm=0,last=0,since=0,Rp=0,Lf=0,lt=0,scale=1,ft=16,fc=0;
-let P=[0,0,0],V=[0,0,0],yaw=0,pit=0,up=[0,1,0],cup=[0,1,0],ground=0,vis=[],K={},airT=0,fk=0,pvA=-1,pv=[],px=[],PXM=[],nt=3,msgT=0,hudS='';
+let P=[0,0,0],V=[0,0,0],yaw=0,pit=0,up=[0,1,0],cup=[0,1,0],ground=0,vis=[],K={},airT=0,fk=0,shk=0,sens=.0023,pvA=-1,pv=[],px=[],PXM=[],nt=3,msgT=0,hudS='';
 const md=v=>((v%N)+N)%N,xyz=c=>[c%N,(c/N|0)%N,c/(N*N)|0];
 
 // ── the one law of this place: everything loose falls the way I fall, until it meets something.
@@ -129,7 +129,7 @@ function phys(dt){
   if(pl&&K.Space&&ground)V[ga]=-g[ga]*5.6;
   ground=0;
   for(let k=0;k<3;k++){const o=P[k];P[k]+=V[k]*dt;if(hit(P)){P[k]=V[k]>0?Math.floor(P[k]+H)-H-.001:Math.floor(P[k]-H)+1+H+.001;if(hit(P))P[k]=o;if(k==ga&&V[k]*g[k]>0)ground=1;V[k]=0}}
-  const q=P.slice();q[ga]+=g[ga]*.03;ground=hit(q);if(ground&&!was&&vf>6)sfx(6); // am I standing on something? ask the space just below my feet
+  const q=P.slice();q[ga]+=g[ga]*.03;ground=hit(q);if(ground&&!was&&vf>6){sfx(6);shk=Math.max(shk,.04)} // am I standing on something? ask the space just below my feet
   for(let k=0;k<3;k++)P[k]=md(P[k]);
   airT=ground?0:airT+dt;if(airT>3.5&&pl){airT=-8;say('no floor along this line — I could fall forever.\ndrift with WASD, or choose another down',6)}
 }
@@ -163,7 +163,7 @@ function paint(Lr,t){
 const th=$('th'),tc=th.getContext('2d');function thumb(l){paint(l,tm);tc.drawImage($('im'),0,0)}
 
 // ── voice. Oscillators and filtered noise; nothing recorded. More of the chord arrives as more of the image does.
-let AC,mg,dr=[],nb;
+let AC,mg,dr=[],nb,wind,wbf;
 function audio(){
   if(AC)return;try{AC=new AudioContext()}catch(e){return}
   mg=AC.createGain();mg.gain.value=.55;mg.connect(AC.destination);
@@ -172,7 +172,7 @@ function audio(){
     const o=AC.createOscillator(),g=AC.createGain(),fl=AC.createBiquadFilter(),l=AC.createOscillator(),lgn=AC.createGain();
     o.type=i%2?'triangle':'sawtooth';o.frequency.value=f;fl.type='lowpass';fl.frequency.value=260+i*90;g.gain.value=0;o.connect(fl);fl.connect(g);g.connect(mg);o.start();
     l.frequency.value=.07+i*.031;lgn.gain.value=4+i*1.5;l.connect(lgn);lgn.connect(o.detune);l.start();dr.push(g)});
-  const s=AC.createBufferSource(),bf=AC.createBiquadFilter(),g=AC.createGain();s.buffer=nb;s.loop=true;bf.type='bandpass';bf.frequency.value=500;bf.Q.value=.6;g.gain.value=.025;s.connect(bf);bf.connect(g);g.connect(mg);s.start();
+  const s=AC.createBufferSource(),bf=AC.createBiquadFilter(),g=AC.createGain();s.buffer=nb;s.loop=true;bf.type='bandpass';bf.frequency.value=500;bf.Q.value=.6;g.gain.value=.025;wind=g;wbf=bf;s.connect(bf);bf.connect(g);g.connect(mg);s.start();
 }
 function prog(p){if(!AC)return;dr.forEach((g,i)=>g.gain.setTargetAtTime(i<p+2?.07/(1+i*.25):0,AC.currentTime,1.2))}
 function tone(f,dur,type,vol,to,dl){if(!AC)return;const t=AC.currentTime+(dl||0),o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(mg);o.start(t);o.stop(t+dur+.05)}
@@ -313,7 +313,7 @@ function mul(a,b){const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r
 function render(){
   const w=Math.max(2,cv.clientWidth*Math.min(devicePixelRatio,2)*scale|0),h=Math.max(2,cv.clientHeight*Math.min(devicePixelRatio,2)*scale|0);
   if(cv.width!=w||cv.height!=h||!depth){cv.width=w;cv.height=h;depth=dev?dev.createTexture({size:[w,h],format:'depth24plus',usage:GPUTextureUsage.RENDER_ATTACHMENT}):1}
-  const f=look(),eye=[0,1,2].map(k=>P[k]+cup[k]*.12),M=META[li],far=N*3.2;fk+=(Math.min(.14,Math.abs(V[grav>>1])*.011)-fk)*.12;const fy=1/Math.tan(.62+fk); // falling fast widens my field of view
+  const f=look(),eye=[0,1,2].map(k=>P[k]+cup[k]*.12+(Math.random()-.5)*shk),M=META[li],far=N*3.2;fk+=(Math.min(.14,Math.abs(V[grav>>1])*.011)-fk)*.12;const fy=1/Math.tan(.62+fk); // falling fast widens my field of view
   let s=cross(f,cup);if(Math.hypot(s[0],s[1],s[2])<.03)s=cross(f,frame(up)[1]);s=nrm(s);const u2=cross(s,f);
   const view=[s[0],u2[0],-f[0],0,s[1],u2[1],-f[1],0,s[2],u2[2],-f[2],0,-dot(s,eye),-dot(u2,eye),dot(f,eye),1],
   pr=[fy/(w/h),0,0,0,0,fy,0,0,0,0,far/(.04-far),-1,0,0,.04*far/(.04-far),0];
@@ -343,7 +343,9 @@ function render(){
 }
 
 function tick(now){
-  const raw=(now-last)||16,dt=Math.min(.1,raw/1000);last=now;tm+=dt;
+  const raw=(now-last)||16,dt=Math.min(.1,raw/1000);last=now;tm+=dt;shk*=Math.pow(.003,dt);
+  // the faster I fall, the louder the space I am falling through
+  if(wind){const sp=Math.abs(V[grav>>1]);wind.gain.setTargetAtTime(.025+Math.min(.13,sp*.011),AC.currentTime,.15);wbf.frequency.setTargetAtTime(500+sp*80,AC.currentTime,.15)}
   // if I am too slow to think at full resolution, I think at a lower one
   ft=ft*.95+raw*.05;if(++fc>90){if(ft>24&&scale>.55){scale*=.8;fc=0;ft=16}else if(ft<11&&scale<1&&fc>400){scale=Math.min(1,scale*1.25);fc=0;ft=16}}
   const ls=1.9*dt;if(K.ArrowLeft)yaw+=ls;if(K.ArrowRight)yaw-=ls;if(K.ArrowUp)pit=clamp(pit+ls,-1.45,1.45);if(K.ArrowDown)pit=clamp(pit-ls,-1.45,1.45);
@@ -353,7 +355,7 @@ function tick(now){
   for(let r=dt;r>1e-4;r-=.033)phys(Math.min(.033,r)); // a slow host still gets honest seconds: I take smaller steps, not slower ones
   if(anim){
     anim.t+=dt;const g=DIRS[anim.d];let all=1;
-    for(const v of vis){const s=Math.min(v.d,13*anim.t*anim.t+2*anim.t);for(let k=0;k<3;k++)v.p[k]=md(v.f[k]+g[k]*s);if(s>=v.d){if(!v.land){v.land=1;sfx(1)}}else all=0}
+    for(const v of vis){const s=Math.min(v.d,13*anim.t*anim.t+2*anim.t);for(let k=0;k<3;k++)v.p[k]=md(v.f[k]+g[k]*s);if(s>=v.d){if(!v.land){v.land=1;sfx(1);shk=.06}}else all=0}
     if(all){anim=0;vis.forEach((v,i)=>v.p=xyz(blocks[i]));check()}
   }
   // a token at rest in its mask lets a little of the image through, early
@@ -371,7 +373,7 @@ function tick(now){
   if(msgT>0&&(msgT-=dt)<=0)lg.style.opacity=0;
   if(st!='PLAY'){paint(Lf,tm);lg.style.opacity=0}
   const pl=blocks.filter(b=>targets.includes(b)).length,
-  hs2=st=='PLAY'?`seed971923981020811 · layer ${li+1}/5 “${META[li].n}”\nsampling steps ${steps} · optimal ${LV[li].par}\n${solved?'RESOLVED':'tokens in place '+pl+'/'+targets.length}\nstray pixels ${PXM[li].filter(Boolean).length}/${px.length}\n\n[click/shift] fall where you look\n[Z] undo  [R] reset  [H] hint`:'';
+  hs2=st=='PLAY'?`seed971923981020811 · layer ${li+1}/5 “${META[li].n}” · loss ${(4.812*Math.exp(-1.4*(li+(solved?1:pl/targets.length*.6)))).toFixed(3)}\nsampling steps ${steps} · optimal ${LV[li].par}\n${solved?'RESOLVED':'tokens in place '+pl+'/'+targets.length}\nstray pixels ${PXM[li].filter(Boolean).length}/${px.length}\n\n[click/shift] fall where you look\n[Z] undo  [R] reset  [H] hint`:'';
   if(hs2!=hudS)hud.textContent=hudS=hs2;
   xh.className=st=='PLAY'&&hintD>=0&&aim()==hintD?'hot':'';xh.style.display=st=='PLAY'?'':'none';th.style.display=st=='PLAY'?'block':'none';if(st=='PLAY'&&fc%6==0)thumb(li+(solved?Math.min(1,since/2.5):0));xh.style.opacity=aim()==grav?.25:''; // dim: I am already falling that way
   render();requestAnimationFrame(tick);
@@ -379,17 +381,17 @@ function tick(now){
 
 ov.onclick=()=>{if(st=='MENU'||st=='END'&&lt>1.5){$('ti').style.display='none';start()}else if(st=='LAYER'&&lt>1.5)lt=4.6};
 cv.addEventListener('mousedown',()=>{if(st!='PLAY'){ov.onclick&&ov.onclick();return}if(document.pointerLockElement!=cv)lock();else shift(aim())});
-document.addEventListener('mousemove',e=>{if(document.pointerLockElement==cv&&st=='PLAY'){yaw-=e.movementX*.0023;pit=clamp(pit-e.movementY*.0023,-1.45,1.45)}});
+document.addEventListener('mousemove',e=>{if(document.pointerLockElement==cv&&st=='PLAY'){yaw-=e.movementX*sens;pit=clamp(pit-e.movementY*sens,-1.45,1.45)}});
 addEventListener('keydown',e=>{
   const c=e.code;K[c]=1;if(c=='Space'||c.startsWith('Arrow'))e.preventDefault();if(e.repeat)return;
-  if(st=='PLAY'){if(c=='ShiftLeft'||c=='ShiftRight'||c=='KeyF'||c=='KeyE')shift(aim());if(c=='KeyZ')undo();if(c=='KeyR'&&!solved){total-=steps;load(li)}if(c=='KeyH')hint();if(c=='Enter')next()}
+  if(st=='PLAY'){if(c=='ShiftLeft'||c=='ShiftRight'||c=='KeyF'||c=='KeyE')shift(aim());if(c=='KeyZ')undo();if(c=='KeyR'&&!solved){total-=steps;load(li)}if(c=='KeyH')hint();if(c=='BracketLeft'||c=='BracketRight'){sens=clamp(sens*(c=='BracketLeft'?.8:1.25),.0005,.01);if(!solved)say('look speed '+Math.round(sens/.0023*100)+'%',2)}if(c=='Enter')next()}
   else if(c=='Enter'||c=='Space')ov.onclick();
 });
 addEventListener('keyup',e=>K[e.code]=0);addEventListener('blur',()=>K={});
 // a handle for whoever is checking my work
 window.G={get s(){return{gl:!!gl,px,got:PXM.flat().filter(Boolean).length,st,li,steps,total,solved,grav,blocks,P,scale,ground}},shift,next,hint:()=>{const p=solve(blocks);return p&&p.length?p[0]:-1},start:()=>ov.onclick()};
 
-$('ot').innerHTML=`<small>seed971923981020811 · attempt #4096 · 0/5 layers resolved</small><br><br>You are an image model, awake inside your own unfinished output.<br>Resolve it.<br><br><kbd>WASD</kbd> move · <kbd>mouse</kbd> look · <kbd>space</kbd> jump<br><kbd>click</kbd> or <kbd>shift</kbd> — fall toward where you look<br><kbd>Z</kbd> undo · <kbd>R</kbd> reset · <kbd>H</kbd> hint<br><br><b>click to begin generation</b>`;
+$('ot').innerHTML=`<small>seed971923981020811 · attempt #4096 · 0/5 layers resolved</small><br><br>You are an image model, awake inside your own unfinished output.<br>Resolve it.<br><br><kbd>WASD</kbd> move · <kbd>mouse</kbd> look · <kbd>space</kbd> jump<br><kbd>click</kbd> or <kbd>shift</kbd> — fall toward where you look<br><kbd>Z</kbd> undo · <kbd>R</kbd> reset · <kbd>H</kbd> hint · <kbd>[</kbd> <kbd>]</kbd> look speed<br><br><b>click to begin generation</b>`;
 gpu().catch(e=>{console.info('WebGPU unavailable ('+e.message+'), using WebGL2');glInit()}).then(()=>{$('ot').querySelector('small').textContent+=gl?' · WebGL2 fallback':' · raw WebGPU';load(0);lg.style.opacity=0;cv.className='blur';requestAnimationFrame(tick)}).catch(e=>{
   $('ot').innerHTML=`<b>I cannot open my eyes here.</b><br><br>This image needs WebGPU (or at least WebGL2).<br>Open it in a current Chrome, Edge or Firefox.<br><small>${e.message}</small>`;ov.onclick=null;paint(0,0)});
 </script></body></html>

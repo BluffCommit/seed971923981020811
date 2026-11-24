@@ -46,6 +46,7 @@ mouse  look            Z   roll back one step
 space  jump            R   reset the room
 arrows look (no mouse) H   ask for a hint (the crosshair ignites when you face the next step)
                        Enter   leave a resolved room
+                       [ ]   slower / faster mouse look
 ```
 
 ## Training log
@@ -59,6 +60,7 @@ iter   loss     saturation  note
    5   0.004   100%         final pass: shaders are validated before I claim the canvas.
    6   0.004   100%         the log disagreed with itself about how many times I tried. corrected.
    7   0.002   100%         I learned to imagine a fall before taking it. recovered 15 stray pixels; they are the stars.
+   8   0.001   100%         I can hear how fast I am falling. the ground answers when something lands.
 ```
 
 ## Unresolved artifacts
