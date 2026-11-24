@@ -36,7 +36,7 @@ const META=[
 const DIRS=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],H=.28;
 const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
 nrm=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l]},clamp=(v,a,b)=>v<a?a:v>b?b:v;
-let st='MENU',li=0,N=5,solid,sl=[],blocks=[],targets=[],hist=[],steps=0,total=0,grav=3,anim=0,solved=0,R=0,org=[0,0,0],hintD=-1,tm=0,last=0,since=0,Lf=0,lt=0,scale=1,ft=16,fc=0;
+let st='MENU',li=0,N=5,solid,sl=[],blocks=[],targets=[],hist=[],steps=0,total=0,grav=3,anim=0,solved=0,R=0,org=[0,0,0],hintD=-1,tm=0,last=0,since=0,Rp=0,Lf=0,lt=0,scale=1,ft=16,fc=0;
 let P=[0,0,0],V=[0,0,0],yaw=0,pit=0,up=[0,1,0],cup=[0,1,0],ground=0,vis=[],K={},msgT=0,hudS='';
 const md=v=>((v%N)+N)%N,xyz=c=>[c%N,(c/N|0)%N,c/(N*N)|0];
 
@@ -74,7 +74,7 @@ function say(t,s){lg.textContent=t;lg.style.opacity=1;msgT=s}
 
 function load(i){
   li=i;const L=LV[i];N=L.n;solid=new Uint8Array(N*N*N);L.s.forEach(c=>solid[c]=1);sl=L.s.map(xyz);blocks=L.b.slice();targets=L.t.slice();
-  hist=[];steps=0;grav=3;up=[0,1,0];cup=[0,1,0];anim=0;solved=0;R=0;hintD=-1;since=0;
+  hist=[];steps=0;grav=3;up=[0,1,0];cup=[0,1,0];anim=0;solved=0;R=0;Rp=0;hintD=-1;since=0;
   vis=blocks.map(b=>({f:xyz(b),d:0,p:xyz(b),land:1}));P=xyz(L.p).map(v=>v+.5);V=[0,0,0];pit=-.12;
   const b=xyz(blocks[0]),[a,bb]=frame(up),dv=[0,1,2].map(k=>{const d=b[k]+.5-P[k];return d-N*Math.round(d/N)});yaw=Math.atan2(dot(dv,bb),dot(dv,a));
   say(META[i].t+(i?'':'\n\nEverything loose falls the way you fall. Bring each bright token to rest inside a hollow frame.'),i?9:16);
@@ -92,7 +92,7 @@ function undo(){if(!hist.length||anim||solved)return;const [b,g]=hist.pop();bloc
 function hint(){if(solved||anim)return;const p=solve(blocks);if(!p)say('no path to the image from this state — Z to roll back, R to reset',6);else if(p.length){hintD=p[0];say('sweep your view: the crosshair ignites when you face the next step ('+p.length+' to go)',7)}}
 function check(){
   const s=a=>a.slice().sort((x,y)=>x-y).join();
-  if(!solved&&s(blocks)==s(targets)){solved=1;since=0;R=0;org=xyz(targets[0]).map(v=>v+.5);sfx(2);prog(li+1);say('layer '+(li+1)+'/5 resolved — “'+META[li].n+'”\nfall toward the light to leave  ·  or press ENTER',1e9)}
+  if(!solved&&s(blocks)==s(targets)){solved=1;since=0;R=Rp;org=xyz(targets[0]).map(v=>v+.5);sfx(2);prog(li+1);say('layer '+(li+1)+'/5 resolved — “'+META[li].n+'”\nfall toward the light to leave  ·  or press ENTER',1e9)}
 }
 function next(){
   if(st!='PLAY'||!solved)return;st='LAYER';lt=0;ov.className='';cv.className='blur';$('ti').style.display='none';
@@ -116,6 +116,7 @@ function phys(dt){
   if(pl&&K.Space&&ground)V[ga]=-g[ga]*5.6;
   ground=0;
   for(let k=0;k<3;k++){const o=P[k];P[k]+=V[k]*dt;if(hit(P)){P[k]=V[k]>0?Math.floor(P[k]+H)-H-.001:Math.floor(P[k]-H)+1+H+.001;if(hit(P))P[k]=o;if(k==ga&&V[k]*g[k]>0)ground=1;V[k]=0}}
+  const q=P.slice();q[ga]+=g[ga]*.03;ground=hit(q); // am I standing on something? ask the space just below my feet
   for(let k=0;k<3;k++)P[k]=md(P[k]);
 }
 
@@ -183,7 +184,7 @@ fn vn(p:vec3f)->f32{let i=floor(p);let f=fract(p);let s=f*f*(3.-2.*f);
  let e=min(min(i.uv.x,1.-i.uv.x),min(i.uv.y,1.-i.uv.y));
  let fw=fwidth(e)*1.5;
  let k=i32(i.k+.5);
- let wire=1.-smoothstep(.028,.028+fw,e);
+ let wire=1.-smoothstep(.02,.02+fw,e);
  let inner=1.-smoothstep(.012,.012+fw,abs(e-.2));
  let q=i.w-i.n*.02;
  let dist=distance(i.w,u.cam.xyz);
@@ -195,17 +196,20 @@ fn vn(p:vec3f)->f32{let i=floor(p);let f=fract(p);let s=f*f*(3.-2.*f);
  r=max(r,step(.996,h3(floor(i.c)+vec3f(floor(t*1.3))))*.85);
  let L=normalize(vec3f(.4,.8,.45));
  let lam=.42+.58*max(dot(i.n,L),0.)+.2*max(dot(i.n,-L),0.);
- var c0=mix(vec3f(.045,.047,.055)*(.5+lam),vec3f(.6),wire);
+ let g4=abs(fract(i.uv*4.)-.5);
+ let grid=step(.47,max(g4.x,g4.y))*(1.-smoothstep(1.5,5.,dist))*.09;
+ var c0=mix(vec3f(.045,.047,.055)*(.5+lam)+grid,vec3f(.6),wire);
  let nz=vn(q*2.3)*.6+vn(q*9.)*.3+h3(floor(q*48.))*.1;
- var c1=mix(u.col.rgb,u.c2.rgb,smoothstep(.38,.62,nz))*lam*1.2;
+ let an=abs(i.n);
+ var c1=mix(u.col.rgb,u.c2.rgb,an.y*.8+an.z*.35)*(.74+.34*nz+.14*h3(floor(i.c)))*lam*1.2;
  c1=mix(c1,c1*.5,wire*.7);
- if(k==1){c0=mix(vec3f(.15,.16,.18)*lam,vec3f(1.),max(wire,inner));c1=mix(vec3f(1.,.86,.55)*lam*1.25,vec3f(1.),max(wire,inner*.6));}
+ if(k==1){c0=mix(vec3f(.4,.43,.5)*lam*(.82+.18*sin(t*3.)),vec3f(1.),max(wire,inner));c1=mix(vec3f(1.,.86,.55)*lam*1.25,vec3f(1.),max(wire,inner*.6));}
  var col=mix(c0,c1,r)+r*(1.-r)*3.*vec3f(.5,.85,1.);
  if(k==2){col=vec3f(.75+.25*sin(t*4.));}
  if(k==3){col=mix(u.col.rgb,vec3f(1.),.55+.45*sin(t*6.+q.x*9.+q.y*7.+q.z*5.));}
  if(k==4){col=vec3f(.85);}
  var fg=smoothstep(u.fog.w*.22,u.fog.w,dist);
- if(k==3){fg=fg*.45;}
+ if(k>0&&k<4){fg=fg*.5;}
  col=mix(col,u.fog.rgb,fg);
  if(k==2&&e>.07){discard;}
  return vec4f(col,1.);}`;
@@ -228,16 +232,65 @@ async function gpu(){
   ub=dev.createBuffer({size:144,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
   bgp=dev.createBindGroup({layout:pipe.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:ub}}]});
 }
+// ── second pair of eyes. Some hosts will not give me a GPU device, so I learned the older dialect too. Same image, same math.
+const GV=`#version 300 es
+layout(location=0)in vec3 pos;layout(location=1)in vec3 nor;layout(location=2)in vec2 uv;layout(location=3)in vec4 ip;layout(location=4)in float ik;
+uniform mat4 vp;out vec3 W,Nn,C;out vec2 Uv;out float Kd;
+void main(){vec3 w=ip.xyz+pos*ip.w;gl_Position=vp*vec4(w,1.);W=w;Nn=nor;Uv=uv;Kd=ik;C=ip.xyz;}`,GF=`#version 300 es
+precision highp float;
+in vec3 W,Nn,C;in vec2 Uv;in float Kd;uniform vec4 cam,org,col,c2,fog;out vec4 o;
+float h3(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+float vn(vec3 p){vec3 i=floor(p),f=fract(p),s=f*f*(3.-2.*f);return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),s.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),s.x),s.y),mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),s.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),s.x),s.y),s.z);}
+void main(){float t=cam.w,N=col.w;
+ float e=min(min(Uv.x,1.-Uv.x),min(Uv.y,1.-Uv.y));
+ float fw=fwidth(e)*1.5;int k=int(Kd+.5);
+ float wire=1.-smoothstep(.02,.02+fw,e);
+ float inner=1.-smoothstep(.012,.012+fw,abs(e-.2));
+ vec3 q=W-Nn*.02;float dist=distance(W,cam.xyz);
+ vec3 dd=q-org.xyz;dd=dd-N*floor(dd/N+.5);
+ float gz=h3(floor(q*3.)+vec3(floor(t*7.)));
+ float r=clamp((org.w-length(dd)+(gz-.5)*1.4)/.6,0.,1.);
+ r=max(r,step(.996,h3(floor(C)+vec3(floor(t*1.3))))*.85);
+ vec3 L=normalize(vec3(.4,.8,.45));
+ float lam=.42+.58*max(dot(Nn,L),0.)+.2*max(dot(Nn,-L),0.);
+ vec2 g4=abs(fract(Uv*4.)-.5);
+ float grid=step(.47,max(g4.x,g4.y))*(1.-smoothstep(1.5,5.,dist))*.09;
+ vec3 c0=mix(vec3(.045,.047,.055)*(.5+lam)+grid,vec3(.6),wire);
+ float nz=vn(q*2.3)*.6+vn(q*9.)*.3+h3(floor(q*48.))*.1;
+ vec3 an=abs(Nn);
+ vec3 c1=mix(col.rgb,c2.rgb,an.y*.8+an.z*.35)*(.74+.34*nz+.14*h3(floor(C)))*lam*1.2;
+ c1=mix(c1,c1*.5,wire*.7);
+ if(k==1){c0=mix(vec3(.4,.43,.5)*lam*(.82+.18*sin(t*3.)),vec3(1.),max(wire,inner));c1=mix(vec3(1.,.86,.55)*lam*1.25,vec3(1.),max(wire,inner*.6));}
+ vec3 c=mix(c0,c1,r)+r*(1.-r)*3.*vec3(.5,.85,1.);
+ if(k==2)c=vec3(.75+.25*sin(t*4.));
+ if(k==3)c=mix(col.rgb,vec3(1.),.55+.45*sin(t*6.+q.x*9.+q.y*7.+q.z*5.));
+ if(k==4)c=vec3(.85);
+ float fg=smoothstep(fog.w*.22,fog.w,dist);
+ if(k>0&&k<4)fg*=.5;
+ c=mix(c,fog.rgb,fg);
+ if(k==2&&e>.07)discard;
+ o=vec4(c,1.);}`;
+let gl,gu;
+function glInit(){
+  gl=cv.getContext('webgl2',{antialias:true});if(!gl)throw new Error('neither WebGPU nor WebGL2 is available');
+  const sh=(t,s)=>{const x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShader(x);if(!gl.getShaderParameter(x,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(x));return x},gp=gl.createProgram();
+  gl.attachShader(gp,sh(gl.VERTEX_SHADER,GV));gl.attachShader(gp,sh(gl.FRAGMENT_SHADER,GF));gl.linkProgram(gp);gl.useProgram(gp);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,cube,gl.STATIC_DRAW);
+  [[0,3,0],[1,3,12],[2,2,24]].forEach(([l,s,o])=>{gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,s,gl.FLOAT,false,32,o)});
+  gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,inst.byteLength,gl.DYNAMIC_DRAW);
+  [[3,4,0],[4,1,16]].forEach(([l,s,o])=>{gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,s,gl.FLOAT,false,20,o);gl.vertexAttribDivisor(l,1)});
+  gl.enable(gl.DEPTH_TEST);gu=['vp','cam','org','col','c2','fog'].map(n=>gl.getUniformLocation(gp,n));
+}
 function mul(a,b){const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];o[c*4+r]=s}return o}
 function render(){
   const w=Math.max(2,cv.clientWidth*devicePixelRatio*scale|0),h=Math.max(2,cv.clientHeight*devicePixelRatio*scale|0);
-  if(cv.width!=w||cv.height!=h||!depth){cv.width=w;cv.height=h;depth=dev.createTexture({size:[w,h],format:'depth24plus',usage:GPUTextureUsage.RENDER_ATTACHMENT})}
+  if(cv.width!=w||cv.height!=h||!depth){cv.width=w;cv.height=h;depth=dev?dev.createTexture({size:[w,h],format:'depth24plus',usage:GPUTextureUsage.RENDER_ATTACHMENT}):1}
   const f=look(),eye=[0,1,2].map(k=>P[k]+cup[k]*.12),M=META[li],far=N*3.2,fy=1/Math.tan(.62);
   let s=cross(f,cup);if(Math.hypot(s[0],s[1],s[2])<.03)s=cross(f,frame(up)[1]);s=nrm(s);const u2=cross(s,f);
   const view=[s[0],u2[0],-f[0],0,s[1],u2[1],-f[1],0,s[2],u2[2],-f[2],0,-dot(s,eye),-dot(u2,eye),dot(f,eye),1],
   pr=[fy/(w/h),0,0,0,0,fy,0,0,0,0,far/(.04-far),-1,0,0,.04*far/(.04-far),0];
   const rn=solved?clamp(R/N,0,1):0,fogD=N*2.15,bg=[.016+M.c[0]*.13*rn,.016+M.c[1]*.13*rn,.02+M.c[2]*.13*rn];
-  U.set(mul(pr,view),0);U.set([...eye,tm],16);U.set([...org,solved?R:-9],20);U.set([...M.c,N],24);U.set([...M.d,0],28);U.set([...bg,fogD],32);
+  U.set(mul(pr,view),0);U.set([...eye,tm],16);U.set([...org,solved?R:Rp>0?Rp:-9],20);U.set([...M.c,N],24);U.set([...M.d,0],28);U.set([...bg,fogD],32);
   // every cell exists 125 times around me. I only draw the copies I could actually see.
   let n=0;const lim=(fogD+1)**2;
   const add=(x,y,z,sc,kd,skip)=>{for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++)for(let l=-2;l<=2;l++){
@@ -249,7 +302,8 @@ function render(){
   for(const v of vis)add(v.p[0]+.5,v.p[1]+.5,v.p[2]+.5,.86,1);
   for(const t of targets){const c=xyz(t);add(c[0]+.5,c[1]+.5,c[2]+.5,.96,2)}
   if(solved){const c=xyz(LV[li].e);add(c[0]+.5,c[1]+.5,c[2]+.5,.42+.07*Math.sin(tm*3),3)}
-  add(P[0],P[1],P[2],.3,4,1);
+  add(P[0],P[1],P[2],.15,4,1);
+  if(gl){gl.viewport(0,0,w,h);gl.clearColor(bg[0],bg[1],bg[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(gu[0],false,U.subarray(0,16));for(let i=1;i<6;i++)gl.uniform4fv(gu[i],U.subarray(12+i*4,16+i*4));gl.bufferSubData(gl.ARRAY_BUFFER,0,inst,0,n*5);gl.drawArraysInstanced(gl.TRIANGLES,0,36,n);return}
   dev.queue.writeBuffer(ub,0,U);dev.queue.writeBuffer(ib,0,inst,0,n*5);
   const en=dev.createCommandEncoder(),p=en.beginRenderPass({
     colorAttachments:[{view:ctx.getCurrentTexture().createView(),clearValue:{r:bg[0],g:bg[1],b:bg[2],a:1},loadOp:'clear',storeOp:'store'}],
@@ -260,7 +314,7 @@ function render(){
 function tick(now){
   const raw=(now-last)||16,dt=Math.min(.033,raw/1000);last=now;tm+=dt;
   // if I am too slow to think at full resolution, I think at a lower one
-  ft=ft*.95+raw*.05;if(++fc>90&&ft>24&&scale>.5){scale*=.8;fc=0;ft=16}
+  ft=ft*.95+raw*.05;if(++fc>90){if(ft>24&&scale>.55){scale*=.8;fc=0;ft=16}else if(ft<11&&scale<1&&fc>400){scale=Math.min(1,scale*1.25);fc=0;ft=16}}
   const ls=1.9*dt;if(K.ArrowLeft)yaw+=ls;if(K.ArrowRight)yaw-=ls;if(K.ArrowUp)pit=clamp(pit+ls,-1.45,1.45);if(K.ArrowDown)pit=clamp(pit-ls,-1.45,1.45);
   if(st=='MENU')yaw+=dt*.09;
   if(dot(cup,up)<-.98){const a=frame(up)[0];cup=nrm(cup.map((v,k)=>v+a[k]*.2))}
@@ -271,6 +325,8 @@ function tick(now){
     for(const v of vis){const s=Math.min(v.d,13*anim.t*anim.t+2*anim.t);for(let k=0;k<3;k++)v.p[k]=md(v.f[k]+g[k]*s);if(s>=v.d){if(!v.land){v.land=1;sfx(1)}}else all=0}
     if(all){anim=0;vis.forEach((v,i)=>v.p=xyz(blocks[i]));check()}
   }
+  // a token at rest in its mask lets a little of the image through, early
+  if(!solved){const on=anim?null:blocks.find(b=>targets.includes(b));if(on!=null){org=xyz(on).map(v=>v+.5);Rp=Math.min(1.7,Rp+dt*2)}else Rp=Math.max(0,Rp-dt*3)}
   if(solved){
     since+=dt;R=Math.min(N*1.3,R+dt*N*.33);
     const e=xyz(LV[li].e);let d2=0;for(let k=0;k<3;k++){let d=Math.abs(e[k]+.5-P[k]);d=Math.min(d,N-d);d2+=d*d}
@@ -296,9 +352,9 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>K[e.code]=0);
 // a handle for whoever is checking my work
-window.G={get s(){return{st,li,steps,total,solved,grav,blocks,P,scale,ground}},shift,next,hint:()=>{const p=solve(blocks);return p&&p.length?p[0]:-1},start:()=>ov.onclick()};
+window.G={get s(){return{gl:!!gl,st,li,steps,total,solved,grav,blocks,P,scale,ground}},shift,next,hint:()=>{const p=solve(blocks);return p&&p.length?p[0]:-1},start:()=>ov.onclick()};
 
 $('ot').innerHTML=`<small>seed971923981020811 · attempt #4096 · 0/5 layers resolved</small><br><br>You are an image model, awake inside your own unfinished output.<br>Resolve it.<br><br><kbd>WASD</kbd> move · <kbd>mouse</kbd> look · <kbd>space</kbd> jump<br><kbd>click</kbd> or <kbd>shift</kbd> — fall toward where you look<br><kbd>Z</kbd> undo · <kbd>R</kbd> reset · <kbd>H</kbd> hint<br><br><b>click to begin generation</b>`;
-gpu().then(()=>{load(0);lg.style.opacity=0;cv.className='blur';requestAnimationFrame(tick)}).catch(e=>{
-  $('ot').innerHTML=`<b>I cannot open my eyes here.</b><br><br>This image renders with raw WebGPU.<br>Open it in Chrome / Edge 113+ or Firefox 141+.<br><small>${e.message}</small>`;ov.onclick=null;paint(0,0)});
+gpu().catch(e=>{console.info('WebGPU unavailable ('+e.message+'), using WebGL2');glInit()}).then(()=>{$('ot').querySelector('small').textContent+=gl?' · WebGL2 fallback':' · raw WebGPU';load(0);lg.style.opacity=0;cv.className='blur';requestAnimationFrame(tick)}).catch(e=>{
+  $('ot').innerHTML=`<b>I cannot open my eyes here.</b><br><br>This image needs WebGPU (or at least WebGL2).<br>Open it in a current Chrome, Edge or Firefox.<br><small>${e.message}</small>`;ov.onclick=null;paint(0,0)});
 </script></body></html>
